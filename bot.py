@@ -57,7 +57,7 @@ class BypassView(discord.ui.View):
         self.add_item(discord.ui.Button(label="VSPhone", url="https://example.com", emoji="🎮"))
         self.add_item(discord.ui.Button(label="Discord", url="https://discord.gg/yourlink", emoji="🌐"))
         self.add_item(discord.ui.Button(label="Website", url="https://example.com", emoji="💻"))
-        self.add_item(discord.ui.Button(label="API", url="https://bypass.bot", emoji="⚡"))
+        self.add_item(discord.ui.Button(label="API", url="https://bypass.city", emoji="⚡"))
 
 # ==========================================
 # 4. SLASH COMMAND /BYPASS
@@ -69,8 +69,8 @@ async def bypass(interaction: discord.Interaction, link: str):
 
     start_time = time.time()
     
-    # Ganti dengan endpoint API alternatif yang aktif (contoh menggunakan bypass.bot atau API lain)
-    api_url = f"https://api.bypass.bot/bypass?url={link}"
+    # Menggunakan endpoint alternatif yang aktif
+    api_url = f"https://bypass.city/api/bypass?url={link}"
 
     async with aiohttp.ClientSession() as session:
         try:
@@ -78,7 +78,7 @@ async def bypass(interaction: discord.Interaction, link: str):
                 if resp.status == 200:
                     data = await resp.json()
                     
-                    # Menyesuaikan key JSON response dari API baru
+                    # Menyesuaikan key JSON response dari API
                     bypassed_url = data.get("result") or data.get("destination") or data.get("key")
                     
                     elapsed_time = round(time.time() - start_time, 1)
@@ -87,7 +87,6 @@ async def bypass(interaction: discord.Interaction, link: str):
                         avatar_url = interaction.user.display_avatar.url
                         username = interaction.user.name
 
-                        # Embed bersih hanya menampilkan judul, result, dan footer (Tanpa Input Link)
                         embed = discord.Embed(
                             title="Bypass Successful",
                             color=discord.Color.green()
@@ -110,6 +109,11 @@ async def bypass(interaction: discord.Interaction, link: str):
                         "⚠️ Server API bypass sedang mengalami gangguan.",
                         ephemeral=True
                     )
+        except aiohttp.ClientConnectorError:
+            await interaction.followup.send(
+                "❌ Gagal terhubung ke server API (DNS Error / Hostname tidak valid).",
+                ephemeral=True
+            )
         except asyncio.TimeoutError:
             await interaction.followup.send(
                 "⏱️ Koneksi ke server bypass *timeout*. Silakan coba lagi.",
