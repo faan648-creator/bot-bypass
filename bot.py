@@ -1,12 +1,12 @@
 import os
+import time
+import asyncio
 from http.server import HTTPServer, BaseHTTPRequestHandler
 import threading
-import asyncio
-import time
-import aiohttp
 import discord
 from discord import app_commands
 from discord.ext import commands
+from playwright.async_api import async_playwright
 
 # ==========================================
 # 1. FAKE WEB SERVER (UNTUK RENDER & UPTIMEROBOT)
@@ -49,7 +49,44 @@ async def on_ready():
         print(f"Gagal sinkronisasi command: {e}")
 
 # ==========================================
-# 3. VIEW / TOMBOL INTERAKTIF (BUTTONS)
+# 3. FUNGSI PLAYWRIGHT (AUTOMATION BYPASS)
+# ==========================================
+async def bypass_platorelay(target_url: str):
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(headless=True)
+        context = await browser.new_context(
+            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+        )
+        page = await context.new_page()
+
+        try:
+            # Membuka link tujuan dengan batas waktu 40 detik
+            await page.goto(target_url, timeout=40000)
+            
+            # Waktu tunggu untuk verifikasi halaman/token awal
+            await page.wait_for_timeout(8000)
+
+            # Cek otomatis tombol "Continue" jika ada
+            try:
+                continue_btn = page.locator("text=Continue")
+                if await continue_btn.count() > 0:
+                    await continue_btn.first.click()
+                    await page.wait_for_timeout(5000)
+            except Exception:
+                pass
+
+            # Mengambil URL akhir hasil proses bypass
+            final_url = page.url
+            await browser.close()
+            return final_url
+
+        except Exception as e:
+            await browser.close()
+            print(f"Error automation: {e}")
+            return None
+
+# ==========================================
+# 4. VIEW / TOMBOL INTERAKTIF (BUTTONS)
 # ==========================================
 class BypassView(discord.ui.View):
     def __init__(self):
@@ -57,76 +94,48 @@ class BypassView(discord.ui.View):
         self.add_item(discord.ui.Button(label="VSPhone", url="https://example.com", emoji="🎮"))
         self.add_item(discord.ui.Button(label="Discord", url="https://discord.gg/yourlink", emoji="🌐"))
         self.add_item(discord.ui.Button(label="Website", url="https://example.com", emoji="💻"))
-        self.add_item(discord.ui.Button(label="API", url="https://bypass.city", emoji="⚡"))
+        self.add_item(discord.ui.Button(label="Bypass Bot", url="https://example.com", emoji="⚡"))
 
 # ==========================================
-# 4. SLASH COMMAND /BYPASS
+# 5. SLASH COMMAND /BYPASS
 # ==========================================
-@bot.tree.command(name="bypass", description="Mengambil key secara otomatis")
-@app_commands.describe(link="Masukkan link tujuan")
+@bot.tree.command(name="bypass", description="Mengambil key secara otomatis via Automation")
+@app_commands.describe(link="Masukkan link platorelay tujuan")
 async def bypass(interaction: discord.Interaction, link: str):
+    # Wajib defer agar bot tidak mengalami error "The application did not respond"
     await interaction.response.defer(ephemeral=False)
 
     start_time = time.time()
     
-    # Menggunakan endpoint alternatif yang aktif
-    api_url = f"https://bypass.city/api/bypass?url={link}"
+    # Menjalankan mesin automation Playwright
+    result_key = await bypass_platorelay(link)
+    
+    elapsed_time = round(time.time() - start_time, 1)
 
-    async with aiohttp.ClientSession() as session:
-        try:
-            async with session.get(api_url, timeout=15) as resp:
-                if resp.status == 200:
-                    data = await resp.json()
-                    
-                    # Menyesuaikan key JSON response dari API
-                    bypassed_url = data.get("result") or data.get("destination") or data.get("key")
-                    
-                    elapsed_time = round(time.time() - start_time, 1)
+    if result_key:
+        avatar_url = interaction.user.display_avatar.url
+        username = interaction.user.name
 
-                    if bypassed_url:
-                        avatar_url = interaction.user.display_avatar.url
-                        username = interaction.user.name
+        embed = discord.Embed(
+            title="Bypass Successful",
+            color=discord.Color.green()
+        )
+        embed.add_field(name="Result", value=f"`{result_key}`", inline=False)
+        embed.set_footer(
+            text=f"Requested by {username} • Processed in {elapsed_time}s",
+            icon_url=avatar_url
+        )
 
-                        embed = discord.Embed(
-                            title="Bypass Successful",
-                            color=discord.Color.green()
-                        )
-                        embed.add_field(name="Result", value=f"`{bypassed_url}`", inline=False)
-                        embed.set_footer(
-                            text=f"Requested by {username} • Processed in {elapsed_time}s",
-                            icon_url=avatar_url
-                        )
-
-                        view = BypassView()
-                        await interaction.followup.send(embed=embed, view=view)
-                    else:
-                        await interaction.followup.send(
-                            "❌ Gagal mendapatkan key. Format link mungkin tidak didukung.",
-                            ephemeral=True
-                        )
-                else:
-                    await interaction.followup.send(
-                        "⚠️ Server API bypass sedang mengalami gangguan.",
-                        ephemeral=True
-                    )
-        except aiohttp.ClientConnectorError:
-            await interaction.followup.send(
-                "❌ Gagal terhubung ke server API (DNS Error / Hostname tidak valid).",
-                ephemeral=True
-            )
-        except asyncio.TimeoutError:
-            await interaction.followup.send(
-                "⏱️ Koneksi ke server bypass *timeout*. Silakan coba lagi.",
-                ephemeral=True
-            )
-        except Exception as e:
-            await interaction.followup.send(
-                f"⚠️ Terjadi kesalahan: `{e}`",
-                ephemeral=True
-            )
+        view = BypassView()
+        await interaction.followup.send(embed=embed, view=view)
+    else:
+        await interaction.followup.send(
+            "❌ Gagal mendapatkan key atau proses automation timeout.",
+            ephemeral=True
+        )
 
 # ==========================================
-# 5. MENJALANKAN BOT
+# 6. MENJALANKAN BOT
 # ==========================================
 TOKEN = os.getenv("DISCORD_BOT_TOKEN")
 if not TOKEN:
