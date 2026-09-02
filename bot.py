@@ -100,7 +100,7 @@ async def bypass(interaction: discord.Interaction, link: str):
     try:
       # Timeout dinaikkan menjadi 30 detik agar server punya waktu untuk memproses solver otomatis
       async with session.get(
-          api_url, params=params, headers=headers, timeout=30
+          api_url, params=params, headers=headers, timeout=60
       ) as resp:
         elapsed_time = round(asyncio.get_event_loop().time() - start_time, 1)
 
