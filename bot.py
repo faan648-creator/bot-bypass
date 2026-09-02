@@ -49,42 +49,54 @@ async def on_ready():
         print(f"Gagal sinkronisasi command: {e}")
 
 # ==========================================
-# 3. SLASH COMMAND /BYPASS (DENGAN EMBED & WEBHOOK)
+# 3. VIEW / TOMBOL INTERAKTIF (BUTTONS)
 # ==========================================
-@bot.tree.command(name="bypass", description="Mengambil key Lynx secara otomatis dan mengirim hasilnya ke webhook")
-@app_commands.describe(link="Masukkan link Lynx / Linkvertise tujuan")
+class BypassView(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=None)
+        # Tombol navigasi / link tambahan di bawah embed
+        self.add_item(discord.ui.Button(label="VSPhone", url="https://example.com", emoji="🎮"))
+        self.add_item(discord.ui.Button(label="Discord", url="https://discord.gg/yourlink", emoji="🌐"))
+        self.add_item(discord.ui.Button(label="Website", url="https://example.com", emoji="💻"))
+        self.add_item(discord.ui.Button(label="API", url="https://bypass.vip", emoji="⚡"))
+
+# ==========================================
+# 4. SLASH COMMAND /BYPASS
+# ==========================================
+@bot.tree.command(name="bypass", description="Mengambil key secara otomatis")
+@app_commands.describe(link="Masukkan link tujuan")
 async def bypass(interaction: discord.Interaction, link: str):
-    await interaction.response.defer(ephemeral=True)
+    # Menggunakan ephemeral=False supaya hasilnya muncul secara publik di channel
+    await interaction.response.defer(ephemeral=False)
 
     start_time = time.time()
+    
+    # Ganti dengan endpoint API bypass yang aktif
     api_url = f"https://api.bypass.vip/bypass?url={link}"
-    webhook_url = os.getenv("DISCORD_WEBHOOK_URL")
-
-    if not webhook_url:
-        await interaction.followup.send(
-            "⚠️ Variabel `DISCORD_WEBHOOK_URL` belum diset di Environment Variables Render!",
-            ephemeral=True
-        )
-        return
 
     async with aiohttp.ClientSession() as session:
         try:
             async with session.get(api_url, timeout=15) as resp:
                 if resp.status == 200:
                     data = await resp.json()
+                    
+                    # Mengambil hasil dari berbagai kemungkinan key JSON response
                     bypassed_url = data.get("result") or data.get("destination") or data.get("key")
                     
                     elapsed_time = round(time.time() - start_time, 1)
 
+                    # Validasi jika yang muncul pesan error shutdown
+                    if bypassed_url and "SHUT DOWN" in str(bypassed_url):
+                        bypassed_url = None
+
                     if bypassed_url:
-                        # Ambil foto profil dan nama user untuk embed
                         avatar_url = interaction.user.display_avatar.url
                         username = interaction.user.name
 
-                        # 1. Buat Embed untuk balasan privat ke user
+                        # Membuat Embed bersih yang hanya menampilkan Result
                         embed = discord.Embed(
                             title="Bypass Successful",
-                            color=discord.Color.green() # Garis hijau di pinggir
+                            color=discord.Color.green()
                         )
                         embed.add_field(name="Result", value=f"`{bypassed_url}`", inline=False)
                         embed.set_footer(
@@ -92,41 +104,16 @@ async def bypass(interaction: discord.Interaction, link: str):
                             icon_url=avatar_url
                         )
 
-                        # 2. Payload Embed untuk dikirim ke Discord Webhook (Lengkap dengan Input Link & Result)
-                        webhook_payload = {
-                            "embeds": [
-                                {
-                                    "title": "Bypass Successful",
-                                    "color": 5763719, # Kode warna hijau integer untuk webhook
-                                    "fields": [
-                                        {"name": "Input Link", "value": link, "inline": False},
-                                        {"name": "Result", "value": f"`{bypassed_url}`", "inline": False}
-                                    ],
-                                    "footer": {
-                                        "text": f"Requested by {username} • Processed in {elapsed_time}s",
-                                        "icon_url": avatar_url
-                                    }
-                                }
-                            ]
-                        }
-                        
-                        # Kirim ke Webhook
-                        async with session.post(webhook_url, json=webhook_payload) as wh_resp:
-                            if wh_resp.status in [200, 204]:
-                                await interaction.followup.send(embed=embed, ephemeral=True)
-                            else:
-                                await interaction.followup.send(
-                                    f"⚠️ Gagal mengirim ke webhook (Status: {wh_resp.status}).",
-                                    ephemeral=True
-                                )
+                        view = BypassView()
+                        await interaction.followup.send(embed=embed, view=view)
                     else:
                         await interaction.followup.send(
-                            "❌ Gagal mengekstrak key dari link tersebut. Pastikan link-nya valid!",
+                            "❌ API sedang gangguan atau link tidak valid/tidak didukung.",
                             ephemeral=True
                         )
                 else:
                     await interaction.followup.send(
-                        "⚠️ Server API bypass sedang mengalami gangguan. Coba beberapa saat lagi.",
+                        "⚠️ Server API bypass sedang mengalami gangguan.",
                         ephemeral=True
                     )
         except asyncio.TimeoutError:
@@ -136,12 +123,12 @@ async def bypass(interaction: discord.Interaction, link: str):
             )
         except Exception as e:
             await interaction.followup.send(
-                f"⚠️ Terjadi kesalahan saat memproses bypass: `{e}`",
+                f"⚠️ Terjadi kesalahan: `{e}`",
                 ephemeral=True
             )
 
 # ==========================================
-# 4. MENJALANKAN BOT
+# 5. MENJALANKAN BOT
 # ==========================================
 TOKEN = os.getenv("DISCORD_BOT_TOKEN")
 if not TOKEN:
