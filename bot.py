@@ -92,7 +92,7 @@ async def bypass(interaction: discord.Interaction, link: str):
                             icon_url=avatar_url
                         )
 
-                        # 2. Payload Embed untuk dikirim ke Discord Webhook
+                        # 2. Payload Embed untuk dikirim ke Discord Webhook (Lengkap dengan Input Link & Result)
                         webhook_payload = {
                             "embeds": [
                                 {
