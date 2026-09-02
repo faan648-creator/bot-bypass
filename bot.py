@@ -90,8 +90,8 @@ async def bypass(interaction: discord.Interaction, link: str):
 
   start_time = asyncio.get_event_loop().time()
 
-  # Menggunakan endpoint lengkap versi v1
-  api_url = "https://api.zpi.web.id/v1/bypass-tools/platoboost/resolve"
+  # Menggunakan titik dua (:) sesuai dokumentasi resmi pada gambar
+  api_url = "https://api.zpi.web.id/v1/bypass-tools:platoboost/resolve"
   params = {"url": link}
 
   # Mengambil API Key dari environment variable
