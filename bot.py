@@ -57,7 +57,7 @@ class BypassView(discord.ui.View):
         self.add_item(discord.ui.Button(label="VSPhone", url="https://example.com", emoji="🎮"))
         self.add_item(discord.ui.Button(label="Discord", url="https://discord.gg/yourlink", emoji="🌐"))
         self.add_item(discord.ui.Button(label="Website", url="https://example.com", emoji="💻"))
-        self.add_item(discord.ui.Button(label="API", url="https://example.com", emoji="⚡"))
+        self.add_item(discord.ui.Button(label="API", url="https://bypass.city", emoji="⚡"))
 
 # ==========================================
 # 4. SLASH COMMAND /BYPASS (TEMBAK API)
@@ -69,8 +69,8 @@ async def bypass(interaction: discord.Interaction, link: str):
 
     start_time = time.time()
     
-    # Ganti dengan endpoint API publik alternatif yang aktif
-    api_url = f"https://api.bypass.vip/bypass?url={link}" # Atau ganti URL API lain jika punya
+    # Menggunakan endpoint alternatif bypass.city
+    api_url = f"https://bypass.city/api/bypass?url={link}"
 
     async with aiohttp.ClientSession() as session:
         try:
@@ -79,9 +79,24 @@ async def bypass(interaction: discord.Interaction, link: str):
 
                 if resp.status == 200:
                     data = await resp.json()
-                    bypassed_url = data.get("result") or data.get("destination") or data.get("key")
+                    
+                    # Menyesuaikan berbagai kemungkinan key JSON response dari API
+                    bypassed_url = (
+                        data.get("result") or 
+                        data.get("destination") or 
+                        data.get("key") or 
+                        data.get("bypassed")
+                    )
 
                     if bypassed_url:
+                        # Cek apakah respons dari API berisi pesan peringatan penutupan
+                        if "SHUT DOWN" in str(bypassed_url).upper() or "LEECHERS" in str(bypassed_url).upper():
+                            await interaction.followup.send(
+                                "⚠️ Endpoint API ini telah mematikan layanan gratisnya. Silakan cari endpoint API publik lain yang aktif.",
+                                ephemeral=True
+                            )
+                            return
+
                         avatar_url = interaction.user.display_avatar.url
                         username = interaction.user.name
 
@@ -99,7 +114,7 @@ async def bypass(interaction: discord.Interaction, link: str):
                         await interaction.followup.send(embed=embed, view=view)
                     else:
                         await interaction.followup.send(
-                            "❌ Gagal mendapatkan key dari respons API.", ephemeral=True
+                            "❌ Gagal mendapatkan key dari respons API. Format respons tidak dikenali.", ephemeral=True
                         )
                 else:
                     await interaction.followup.send(
