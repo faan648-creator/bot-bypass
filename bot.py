@@ -90,13 +90,19 @@ async def bypass(interaction: discord.Interaction, link: str):
 
   start_time = asyncio.get_event_loop().time()
 
-  # Menggunakan endpoint zpi.web.id sesuai hasil temuan
-  api_url = "https://zpi.web.id/api/bypass-tools/platoboost/resolve"
+  # Menggunakan endpoint lengkap versi v1
+  api_url = "https://api.zpi.web.id/v1/bypass-tools/platoboost/resolve"
   params = {"url": link}
+
+  # Mengambil API Key dari environment variable
+  zpi_key = os.getenv("ZPI_API_KEY", "zpi_masukkan_api_key_lu_disini")
+  headers = {"x-api-key": zpi_key}
 
   async with aiohttp.ClientSession() as session:
     try:
-      async with session.get(api_url, params=params, timeout=10) as resp:
+      async with session.get(
+          api_url, params=params, headers=headers, timeout=10
+      ) as resp:
         elapsed_time = round(asyncio.get_event_loop().time() - start_time, 1)
 
         if resp.status == 200:
@@ -114,11 +120,11 @@ async def bypass(interaction: discord.Interaction, link: str):
             embed = discord.Embed(
                 title="Bypass Successful", color=discord.Color.green()
             )
-            embed.add_field(name="Layanan", value=f"`{service_name}`", inline=False)
-            embed.add_field(name="Key", value=f"`{key}`", inline=False)
+            embed.add_field(name="", value=f"🛠️ **Layanan:** `{service_name}`", inline=False)
+            embed.add_field(name="", value=f"🔑 **Key:** `{key}`", inline=False)
             if hours_left:
               embed.add_field(
-                  name="Masa Aktif", value=f"{hours_left} jam", inline=False
+                  name="", value=f"⏳ **Masa Aktif:** {hours_left} jam", inline=False
               )
 
             embed.set_footer(
@@ -137,8 +143,10 @@ async def bypass(interaction: discord.Interaction, link: str):
                 ephemeral=True,
             )
         else:
+          response_text = await resp.text()
           await interaction.followup.send(
-              f"⚠️ API mengembalikan status error: {resp.status}", ephemeral=True
+              f"⚠️ API mengembalikan status error: {resp.status}\n`{response_text}`",
+              ephemeral=True,
           )
     except asyncio.TimeoutError:
       await interaction.followup.send(
