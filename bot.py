@@ -54,11 +54,10 @@ async def on_ready():
 class BypassView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
-        # Tombol navigasi / link tambahan di bawah embed
         self.add_item(discord.ui.Button(label="VSPhone", url="https://example.com", emoji="🎮"))
         self.add_item(discord.ui.Button(label="Discord", url="https://discord.gg/yourlink", emoji="🌐"))
         self.add_item(discord.ui.Button(label="Website", url="https://example.com", emoji="💻"))
-        self.add_item(discord.ui.Button(label="API", url="https://bypass.vip", emoji="⚡"))
+        self.add_item(discord.ui.Button(label="API", url="https://bypass.bot", emoji="⚡"))
 
 # ==========================================
 # 4. SLASH COMMAND /BYPASS
@@ -66,13 +65,12 @@ class BypassView(discord.ui.View):
 @bot.tree.command(name="bypass", description="Mengambil key secara otomatis")
 @app_commands.describe(link="Masukkan link tujuan")
 async def bypass(interaction: discord.Interaction, link: str):
-    # Menggunakan ephemeral=False supaya hasilnya muncul secara publik di channel
     await interaction.response.defer(ephemeral=False)
 
     start_time = time.time()
     
-    # Ganti dengan endpoint API bypass yang aktif
-    api_url = f"https://api.bypass.vip/bypass?url={link}"
+    # Ganti dengan endpoint API alternatif yang aktif (contoh menggunakan bypass.bot atau API lain)
+    api_url = f"https://api.bypass.bot/bypass?url={link}"
 
     async with aiohttp.ClientSession() as session:
         try:
@@ -80,20 +78,16 @@ async def bypass(interaction: discord.Interaction, link: str):
                 if resp.status == 200:
                     data = await resp.json()
                     
-                    # Mengambil hasil dari berbagai kemungkinan key JSON response
+                    # Menyesuaikan key JSON response dari API baru
                     bypassed_url = data.get("result") or data.get("destination") or data.get("key")
                     
                     elapsed_time = round(time.time() - start_time, 1)
-
-                    # Validasi jika yang muncul pesan error shutdown
-                    if bypassed_url and "SHUT DOWN" in str(bypassed_url):
-                        bypassed_url = None
 
                     if bypassed_url:
                         avatar_url = interaction.user.display_avatar.url
                         username = interaction.user.name
 
-                        # Membuat Embed bersih yang hanya menampilkan Result
+                        # Embed bersih hanya menampilkan judul, result, dan footer (Tanpa Input Link)
                         embed = discord.Embed(
                             title="Bypass Successful",
                             color=discord.Color.green()
@@ -108,7 +102,7 @@ async def bypass(interaction: discord.Interaction, link: str):
                         await interaction.followup.send(embed=embed, view=view)
                     else:
                         await interaction.followup.send(
-                            "❌ API sedang gangguan atau link tidak valid/tidak didukung.",
+                            "❌ Gagal mendapatkan key. Format link mungkin tidak didukung.",
                             ephemeral=True
                         )
                 else:
