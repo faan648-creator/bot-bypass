@@ -90,25 +90,23 @@ async def bypass(interaction: discord.Interaction, link: str):
 
   start_time = asyncio.get_event_loop().time()
 
-  # Menggunakan titik dua (:) sesuai dokumentasi resmi pada gambar
   api_url = "https://api.zpi.web.id/v1/bypass-tools:platoboost/resolve"
   params = {"url": link}
 
-  # Mengambil API Key dari environment variable
   zpi_key = os.getenv("ZPI_API_KEY", "zpi_masukkan_api_key_lu_disini")
   headers = {"x-api-key": zpi_key}
 
   async with aiohttp.ClientSession() as session:
     try:
+      # Timeout dinaikkan menjadi 30 detik agar server punya waktu untuk memproses solver otomatis
       async with session.get(
-          api_url, params=params, headers=headers, timeout=10
+          api_url, params=params, headers=headers, timeout=30
       ) as resp:
         elapsed_time = round(asyncio.get_event_loop().time() - start_time, 1)
 
         if resp.status == 200:
           data = await resp.json()
 
-          # Mengambil data berdasarkan struktur JSON dari zpi.web.id
           key = data.get("key")
           service_name = data.get("serviceName", "Platoboost")
           hours_left = data.get("hoursLeft")
@@ -138,8 +136,7 @@ async def bypass(interaction: discord.Interaction, link: str):
             await interaction.followup.send(embed=embed, view=view)
           else:
             await interaction.followup.send(
-                "❌ Gagal mendapatkan key dari respons API. Format respons"
-                " tidak sesuai.",
+                "❌ Gagal mendapatkan key dari respons API. Format respons tidak sesuai.",
                 ephemeral=True,
             )
         else:
@@ -150,7 +147,7 @@ async def bypass(interaction: discord.Interaction, link: str):
           )
     except asyncio.TimeoutError:
       await interaction.followup.send(
-          "⏱️ Koneksi ke API terlalu lama (Timeout).", ephemeral=True
+          "⏱️ Proses terlalu lama, server API butuh waktu lebih untuk merespons (Timeout > 30s).", ephemeral=True
       )
     except Exception as e:
       await interaction.followup.send(
